@@ -13,12 +13,12 @@
         Change Log:
                     1.0 (3/14) - Imported original script from Get-ADUserProperties that initially included logging.
                     1.1 (3/14) - Wrote as function Get-UserProps for easier searching. 
-                    1.2 (3/19) - Added Write-Log function for recording all search output. 
+                    1.2 (3/19) - Added Write-Log function for recording all search output.
+                    1.3 (4/2)  - Added progress bar.  
 #>
 
 #Declaration of function that runs the script. Domain is mandatory.
-Function Get-UserProps {
-
+Function Get-UserProps{
 Function Write-Log {
     [CmdletBinding()]
     param(
@@ -46,7 +46,7 @@ Function Show-Domain{
 
     Write-Host "1: Press '1' to connect to domain1.com."
     Write-Host "2: Press '2' to connect to domain2.net."
-    Write-Host "Q: Press 'Q' to quit."
+    Write-Host "Q: Press 'Q' to exit."
 }
 #Actual function for the "GUI" that you see.
 Function Show-Menu
@@ -57,7 +57,7 @@ Function Show-Menu
     Write-Host "1: Press '1' to search by extensionattribute2."
     Write-Host "2: Press '2' to search by email address."
     Write-Host "3: Press '3' to search by upn."
-    Write-Host "Q: Press 'Q' to quit."
+    Write-Host "Q: Press 'Q' to exit."
 }
 
 #The AD search function.
@@ -66,15 +66,16 @@ Function Get-Properties {
         Clear-Host
         Write-Log -Message "Searching the $domain domain." -Severity Information
         Write-Log -Message "User search started at $(Get-Date -Format "HH:mm")"
-        Write-Host "Connected to the $domain domain." -ForegroundColor Yellow
-        Start-Sleep 1
         $data = [System.Collections.ArrayList]@()
         $List = Get-Content "C:\Temp\Users.txt"
         $User = $null
+        $i = 0
+
         Foreach ($account in $List){
+            $i++
             $User = Get-ADUser -Filter {$property -like $account} -Properties * -Server $domain
-            Write-Host "Getting" $user.DisplayName "account information." -ForegroundColor Green
-        
+            $DisplayName = $User.DisplayName
+            Write-Progress -Activity "Searching accounts on $domain." -Status "Retrieving $DisplayName" -PercentComplete (($i / $List.Count)*100)
             if($user -ne $null){
                 Write-Log -Message "Successfully found $account" -Severity Information
             }
@@ -124,13 +125,16 @@ do{
         3 {$property = 'userprincipalname'}
         Q {return}
     }
+   
     #Calls the search function from above  
     Get-Properties
-
-    Pause
+    Show-Domain
     
 }
-until ($input -eq 'q')
+until ($input -eq 'q'){ 
+    
+} 
+
 }
 
 Export-ModuleMember -Function Get-UserProps
